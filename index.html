@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級小管家</title>
+    <title>班級小管家(LocalStorage版)</title>
     <style>
 * {
     margin: 0;
@@ -271,6 +271,8 @@ body {
     cursor: pointer;
     font-size: 0.9rem;
     box-shadow: none;
+    z-index: 10;
+    background-color: rgba(255,255,255,0.8);
 }
 .student-card .delete-student:hover {
     background: #dc3545;
@@ -332,6 +334,29 @@ body {
     font-weight: 600;
     margin-bottom: 1rem;
     color: #2d3748;
+    display: flex; /* Updated for edit button alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between name and edit button */
+}
+
+/* New: Edit name button */
+.edit-name-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #a0aec0;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.edit-name-btn:hover {
+    color: #667eea;
+    background-color: #edf2f7;
 }
 
 .student-score {
@@ -1491,7 +1516,7 @@ body {
 
     /* Countdown Modal responsiveness */
     .countdown-input-group {
-        flex-wrap: wrap; /* Allow inputs to wrap */
+        flex-wrap: wrap; /* Allow items to wrap */
         justify-content: center;
         width: 100%;
         gap: 1rem; /* Adjust gap for smaller screens */
@@ -1655,6 +1680,27 @@ body {
         gap: 1rem;
     }
 }
+
+.student-card.dragging {
+    opacity: 0.5;
+    border: 2px dashed #667eea;
+}
+
+/* Generic Dialog Modal Styles */
+.dialog-overlay { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+.dialog-box { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 20px; animation: dialogFadeIn 0.2s ease-out forwards; }
+@keyframes dialogFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.dialog-header { font-size: 1.4rem; font-weight: 700; color: #4a5568; }
+.dialog-message { font-size: 1rem; color: #666; line-height: 1.5; white-space: pre-line; }
+.dialog-input { width: 100%; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
+.dialog-input:focus { outline: none; border-color: #667eea; }
+.dialog-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 5px; }
+.dialog-btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.dialog-btn-cancel { background: #edf2f7; color: #4a5568; }
+.dialog-btn-cancel:hover { background: #e2e8f0; }
+.dialog-btn-confirm { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+.dialog-btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4); }
+
 </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -1662,7 +1708,7 @@ body {
 <body>
     <header class="header">
         <div class="header-content">
-            <h1><svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" width="28" height="28" role="img"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#2b6cb0"/><path d="M4 10v8a1 1 0 0 0 1 1h4v-5h6v5h4a1 1 0 0 0 1-1v-8L12 15 4 10z" fill="#2c7a7b"/></svg>班級小管家</h1>
+            <h1><svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" width="28" height="28" role="img"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#2b6cb0"/><path d="M4 10v8a1 1 0 0 0 1 1h4v-5h6v5h4a1 1 0 0 0 1-1v-8L12 15 4 10z" fill="#2c7a7b"/></svg>班級小管家(LocalStorage版)</h1>
             <div class="header-right-group">
                 <div class="class-total-score">
                     總分：<span id="total-class-score">0</span>
@@ -1686,6 +1732,7 @@ body {
                         <select id="class-select" class="action-btn"></select>
                         <button id="add-class-btn" class="action-btn">➕ 新增班級</button>
                         <button id="delete-class-btn" class="action-btn delete-btn">🗑️ 刪除班級</button>
+                        <button id="reset-stats-btn" class="action-btn delete-btn">🔄 重置分數/記錄</button>
                         <button id="add-students-text-btn" class="action-btn">➕ 加入學生名單</button>
                         <button id="open-settings-btn" class="action-btn">⚙️ 下拉選單設定</button>
                         <div id="add-students-text-wrapper" style="display:none; width:320px;">
@@ -1711,6 +1758,7 @@ body {
                         <button id="countdown-btn" class="action-btn">⏱️ 倒數計時</button>
                         <button id="contact-book-btn" class="action-btn">📝 連絡簿</button>
                         <button id="homework-check-btn" class="action-btn">✅ 作業檢查</button>
+                        <button id="toggle-all-notes-btn" class="action-btn">👁️ 顯示/隱藏特殊記錄</button>
                         <button id="export-btn" class="action-btn">📊 匯出JSON</button>
                         <button id="import-data-btn" class="action-btn">📥 匯入JSON</button>
                         <input type="file" id="data-file-input" accept=".json" style="display: none;">
@@ -1726,6 +1774,19 @@ body {
     </main>
 
     <div id="toast" class="toast"></div>
+
+    <!-- Custom Dialog -->
+    <div id="custom-dialog" class="dialog-overlay">
+        <div class="dialog-box">
+            <div class="dialog-header" id="dialog-title">提示</div>
+            <div class="dialog-message" id="dialog-message"></div>
+            <input type="text" id="dialog-input" class="dialog-input" style="display:none;" autocomplete="off">
+            <div class="dialog-buttons">
+                <button class="dialog-btn dialog-btn-cancel" id="dialog-cancel">取消</button>
+                <button class="dialog-btn dialog-btn-confirm" id="dialog-confirm">確定</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Drawing Modal Structure -->
     <div id="drawing-modal" class="modal">
@@ -1930,6 +1991,7 @@ class StudentManager {
         this.classes = []; 
         this.currentClassId = null; 
         this.selectedStudent = null; 
+        this.allNotesVisible = false; // NEW: Track global notes visibility
         this.predefinedBehaviors = [ 
             '主動協助同學',
             '積極發言',
@@ -1965,9 +2027,9 @@ class StudentManager {
         this.pauseCountdownBtn = document.getElementById('pause-countdown-btn');
         this.resetCountdownBtn = document.getElementById('reset-countdown-btn');
         this.countdownControlBtns = document.querySelectorAll('.countdown-control-btn'); 
-        this.countdownInterval = null; // Initialize countdown interval
+        this.countdownInterval = null; 
 
-        this.classStudentCountSpan = document.getElementById('class-student-count'); // NEW: student count display
+        this.classStudentCountSpan = document.getElementById('class-student-count'); 
 
         this.contactBookModal = document.getElementById('contact-book-modal');
         this.contactBookModalContent = this.contactBookModal.querySelector('.modal-content');
@@ -2050,8 +2112,8 @@ class StudentManager {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.drawSoundBuffer = null;
         this.countdownSoundBuffer = null; 
-        this.loadSound('draw_sound.mp3', 'draw');
-        this.loadSound('countdown_end_sound.mp3', 'countdown'); 
+        this.loadSound('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg', 'draw');
+        this.loadSound('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg', 'countdown'); 
 
         this.init();
     }
@@ -2116,26 +2178,18 @@ class StudentManager {
     }
 
     init() {
-        console.log('StudentManager init started.');
         const grid = document.getElementById('students-grid');
-        if (!grid) {
-            console.error('Error: #students-grid element not found!');
-            return;
-        }
-        console.log('#students-grid element found.');
+        if (!grid) return;
 
         this.loadData();
         
         let shouldRenderStudentsExplicitly = true;
 
         if (this.classes.length === 0) {
-            console.log('No classes found on first run — starting with no classes. Use 「新增班級」建立新班級。');
-            // Keep currentClassId as null and allow user to add classes manually.
             this.currentClassId = null;
             shouldRenderStudentsExplicitly = true;
         } else {
             if (this.currentClassId === null || !this.classes.some(cls => cls.id === this.currentClassId)) {
-                console.warn('currentClassId is invalid or not set, defaulting to first available class.');
                 this.currentClassId = this.classes[0].id; 
                 this.saveData(); 
             }
@@ -2187,7 +2241,6 @@ class StudentManager {
         this.updateCountdownDisplay(); 
         this.renderContactBook(); 
         this.initializeStudentsPerRowSelect(); 
-        console.log('StudentManager init finished.');
     }
 
     addFirstTimeDemoClass(name) {
@@ -2227,11 +2280,11 @@ class StudentManager {
             return;
         }
 
-        const todayDateKey = this.formatDateForStorage(new Date()); // Get today's date for summary
+        const todayDateKey = this.formatDateForStorage(new Date()); 
 
         currentClass.students.forEach(student => {
-            const homeworkSummary = this.getStudentHomeworkSummaryForDate(student.id, todayDateKey); // Calculate summary
-            const card = this.createStudentCard(student, homeworkSummary); // Pass summary to create card
+            const homeworkSummary = this.getStudentHomeworkSummaryForDate(student.id, todayDateKey); 
+            const card = this.createStudentCard(student, homeworkSummary); 
             grid.appendChild(card);
         });
 
@@ -2259,7 +2312,6 @@ class StudentManager {
 
         const isDisabled = student.onLeave ? 'disabled' : '';
 
-        // Determine score class based on score value
         let scoreClass = 'neutral';
         if (student.score > 0) {
             scoreClass = 'positive';
@@ -2267,13 +2319,19 @@ class StudentManager {
             scoreClass = 'negative';
         }
 
-        // Default homeworkSummary if not provided (e.g., if a student card is created directly, though usually it comes from renderStudents)
         homeworkSummary = homeworkSummary || { notSubmitted: 0, toBeCorrected: 0 };
+
+        // Determine if notes should be initially shown based on global flag
+        const notesWrapperClass = this.allNotesVisible ? 'notes-content-wrapper' : 'notes-content-wrapper hidden';
+        const checkboxChecked = this.allNotesVisible ? 'checked' : '';
 
         card.innerHTML = `
             <button class="student-action-btn delete-student" title="刪除學生">🗑️</button>
             <div class="student-avatar">${student.avatar}</div>
-            <div class="student-name">${student.name}</div>
+            <div class="student-name">
+                <span>${student.name}</span>
+                <button class="edit-name-btn" title="修改姓名">✏️</button>
+            </div>
             <div class="student-score ${scoreClass}">${student.score}</div>
             
             <div class="homework-summary">
@@ -2290,10 +2348,10 @@ class StudentManager {
                 <div class="notes-header">
                     <h4>特殊表現記錄</h4>
                     <label class="toggle-notes-label">
-                        <input type="checkbox" class="toggle-notes-checkbox"> 顯示
+                        <input type="checkbox" class="toggle-notes-checkbox" ${checkboxChecked}> 顯示
                     </label>
                 </div>
-                <div class="notes-content-wrapper hidden">
+                <div class="${notesWrapperClass}">
                     <div class="notes-input-group">
                         <select class="predefined-notes-select" ${isDisabled}>
                             <option value="">請選擇常用表現</option>
@@ -2309,9 +2367,16 @@ class StudentManager {
             if (!event.target.closest('.student-action-btn') && 
                 !event.target.closest('.student-notes-input') && 
                 !event.target.closest('.predefined-notes-select') &&
-                !event.target.closest('.toggle-notes-label')) { 
+                !event.target.closest('.toggle-notes-label') &&
+                !event.target.closest('.edit-name-btn')) { // Added check for edit-name-btn
                 this.selectStudent(student.id);
             }
+        });
+
+        // Event listener for edit name button
+        card.querySelector('.edit-name-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.editStudentName(student.id);
         });
 
         card.querySelector('.student-action-btn.positive').addEventListener('click', () => {
@@ -2333,9 +2398,8 @@ class StudentManager {
             this.toggleStudentLeave(student.id);
         });
 
-        // NEW: delete student button
         card.querySelector('.student-action-btn.delete-student').addEventListener('click', (ev) => {
-            ev.stopPropagation(); // prevent selecting the card
+            ev.stopPropagation(); 
             this.deleteStudent(student.id);
         });
 
@@ -2421,13 +2485,10 @@ class StudentManager {
         };
         try {
             localStorage.setItem('studentManagerData', JSON.stringify(dataToSave));
-            console.log('Data saved successfully.');
         } catch (e) {
             console.error("Error saving data to localStorage:", e);
         }
     }
-
-    // --- Utility Methods ---
 
     showToast(message, duration = 3000) {
         const toast = document.getElementById('toast');
@@ -2464,12 +2525,12 @@ class StudentManager {
         const currentClass = this.getCurrentClass();
         if (currentClass) {
             classDisplayName.textContent = `班級：${currentClass.name}`;
-            this.drawingClassNameSpan.textContent = currentClass.name; // Update drawing modal class name
-            this.classStudentCountSpan.textContent = currentClass.students.length; // Update student count display
+            this.drawingClassNameSpan.textContent = currentClass.name; 
+            this.classStudentCountSpan.textContent = currentClass.students.length; 
         } else {
             classDisplayName.textContent = '班級：未選擇';
             this.drawingClassNameSpan.textContent = '未選擇';
-            this.classStudentCountSpan.textContent = '0'; // Update student count display
+            this.classStudentCountSpan.textContent = '0'; 
         }
     }
 
@@ -2502,21 +2563,21 @@ class StudentManager {
         return { notSubmitted, toBeCorrected };
     }
 
-    // --- Class Management ---
-
     renderClassSelector() {
         const classSelect = document.getElementById('class-select');
-        classSelect.innerHTML = ''; // Clear existing options
+        classSelect.innerHTML = ''; 
 
         if (this.classes.length === 0) {
             classSelect.innerHTML = '<option value="">無班級</option>';
             classSelect.disabled = true;
             document.getElementById('delete-class-btn').disabled = true;
+            document.getElementById('reset-stats-btn').disabled = true; // Also disable reset btn
             return;
         }
 
         classSelect.disabled = false;
         document.getElementById('delete-class-btn').disabled = false;
+        document.getElementById('reset-stats-btn').disabled = false;
 
         this.classes.forEach(cls => {
             const option = document.createElement('option');
@@ -2525,11 +2586,10 @@ class StudentManager {
             classSelect.appendChild(option);
         });
 
-        // Set the current class as selected in the dropdown
         if (this.currentClassId) {
             classSelect.value = this.currentClassId;
         } else if (this.classes.length > 0) {
-            this.currentClassId = this.classes[0].id; // Default to the first class if none selected
+            this.currentClassId = this.classes[0].id; 
             classSelect.value = this.currentClassId;
             this.saveData();
         }
@@ -2543,60 +2603,101 @@ class StudentManager {
         this.updateClassInfoDisplay();
         this.showToast(`已切換至班級：${this.getCurrentClass().name}`);
 
-        // Reset drawing state when switching class
         this.resetDrawing();
     }
 
-    addClass() {
-        const className = prompt('請輸入新班級名稱：');
-        if (className && className.trim() !== '') {
-            if (this.classes.some(cls => cls.name === className.trim())) {
-                this.showToast('班級名稱已存在，請使用不同名稱。', 3000);
-                return;
-            }
-            const newClass = {
-                id: Date.now(),
-                name: className.trim(),
-                students: [], // New classes start with no students
-                contactBookEntries: {},
-                homeworkCheckEntries: {}
-            };
-            this.classes.push(newClass);
-            this.currentClassId = newClass.id;
-            this.saveData();
-            this.renderClassSelector();
-            this.renderStudents(); // Re-render to show empty grid or new students
-            this.showToast(`已新增班級：${className}`);
+    // Custom Dialog Logic to replace prompt/confirm
+    showDialog(options) {
+        const modal = document.getElementById('custom-dialog');
+        const titleEl = document.getElementById('dialog-title');
+        const msgEl = document.getElementById('dialog-message');
+        const inputEl = document.getElementById('dialog-input');
+        const cancelBtn = document.getElementById('dialog-cancel');
+        const confirmBtn = document.getElementById('dialog-confirm');
+
+        titleEl.textContent = options.title || '提示';
+        msgEl.textContent = options.message || '';
+        
+        if (options.hasInput) {
+            inputEl.style.display = 'block';
+            inputEl.value = options.inputValue || ''; // Support initial value
+            inputEl.placeholder = options.inputPlaceholder || '';
+            setTimeout(() => inputEl.focus(), 100);
+        } else {
+            inputEl.style.display = 'none';
         }
+
+        modal.style.display = 'flex';
+
+        const close = () => {
+            modal.style.display = 'none';
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+        };
+
+        cancelBtn.onclick = close;
+        confirmBtn.onclick = () => {
+            const val = inputEl.value;
+            if (options.onConfirm) options.onConfirm(val);
+            close();
+        };
+    }
+
+    addClass() {
+        this.showDialog({
+            title: '新增班級',
+            message: '請輸入新班級名稱：',
+            hasInput: true,
+            onConfirm: (inputValue) => {
+                const className = inputValue ? inputValue.trim() : '';
+                if (!className) return;
+                
+                if (this.classes.some(cls => cls.name === className)) {
+                    this.showToast('班級名稱已存在，請使用不同名稱。');
+                    return;
+                }
+                
+                const newClass = {
+                    id: Date.now(),
+                    name: className,
+                    students: [],
+                    contactBookEntries: {},
+                    homeworkCheckEntries: {}
+                };
+                this.classes.push(newClass);
+                this.currentClassId = newClass.id;
+                this.saveData();
+                this.renderClassSelector();
+                this.renderStudents(); 
+                this.showToast(`已新增班級：${className}`);
+            }
+        });
     }
 
     deleteClass() {
-        if (this.classes.length <= 1) {
-            this.showToast('至少需要保留一個班級。', 3000);
-            return;
-        }
-
+        if (this.classes.length === 0) return;
         const currentClass = this.getCurrentClass();
         if (!currentClass) return;
 
-        if (confirm(`確定要刪除班級「${currentClass.name}」嗎？所有學生資料也將被刪除！`)) {
-            this.classes = this.classes.filter(cls => cls.id !== currentClass.id);
+        this.showDialog({
+            title: '刪除班級',
+            message: `確定要刪除班級「${currentClass.name}」嗎？\n所有學生資料也將被刪除！`,
+            onConfirm: () => {
+                this.classes = this.classes.filter(cls => cls.id !== currentClass.id);
 
-            // After deletion, set currentClassId to the first available class
-            if (this.classes.length > 0) {
-                this.currentClassId = this.classes[0].id;
-            } else {
-                this.currentClassId = null; // No classes left
+                if (this.classes.length > 0) {
+                    this.currentClassId = this.classes[0].id;
+                } else {
+                    this.currentClassId = null; 
+                }
+
+                this.saveData();
+                this.renderClassSelector();
+                this.renderStudents();
+                this.showToast(`班級「${currentClass.name}」已刪除。`);
             }
-
-            this.saveData();
-            this.renderClassSelector();
-            this.renderStudents();
-            this.showToast(`班級「${currentClass.name}」已刪除。`);
-        }
+        });
     }
-
-    // --- Student Actions ---
 
     selectStudent(studentId) {
         const studentCards = document.querySelectorAll('.student-card');
@@ -2612,6 +2713,56 @@ class StudentManager {
         } else {
             this.selectedStudent = null;
         }
+    }
+
+    // New function to edit student name
+    editStudentName(studentId) {
+        const currentClass = this.getCurrentClass();
+        if (!currentClass) return;
+        const student = currentClass.students.find(s => s.id === studentId);
+        if (!student) return;
+
+        this.showDialog({
+            title: '修改姓名',
+            message: `請輸入「${student.name}」的新名字：`,
+            hasInput: true,
+            inputValue: student.name,
+            onConfirm: (newName) => {
+                const trimmedName = newName ? newName.trim() : '';
+                if (trimmedName && trimmedName !== student.name) {
+                    student.name = trimmedName;
+                    student.avatar = trimmedName.charAt(0); // Update avatar too
+                    this.saveData();
+                    this.renderStudents();
+                    this.showToast(`學生姓名已更新為：${trimmedName}`);
+                }
+            }
+        });
+    }
+
+    // New function to reset class stats
+    resetClassStats() {
+        const currentClass = this.getCurrentClass();
+        if (!currentClass || currentClass.students.length === 0) return;
+
+        this.showDialog({
+            title: '重置確認',
+            message: `⚠️ 確定要重置「${currentClass.name}」所有學生的分數和記錄嗎？\n\n這將會：\n1. 將所有學生分數歸零\n2. 清空所有特殊表現記錄\n3. 清空分數增減歷程\n\n此操作無法復原！`,
+            onConfirm: () => {
+                currentClass.students.forEach(student => {
+                    student.score = 0;
+                    student.actions = [];
+                    student.notes = '';
+                    // We typically keep 'onLeave' status as is, unless a full reset is implied. 
+                    // Based on "reset scores to 0", keeping attendance status seems safer, 
+                    // but usually a term reset might clear leave too. 
+                    // I'll stick to clearing what was asked: scores and records.
+                });
+                this.saveData();
+                this.renderStudents();
+                this.showToast(`已重置全班分數與記錄。`);
+            }
+        });
     }
 
     updateStudentScore(studentId, points, actionDescription) {
@@ -2630,7 +2781,7 @@ class StudentManager {
             });
 
             this.saveData();
-            this.renderStudents(); // Re-render to update score and potentially highlight selected card
+            this.renderStudents(); 
         }
     }
 
@@ -2659,35 +2810,35 @@ class StudentManager {
         }
     }
 
-    // NEW: Delete a student from the current class
     deleteStudent(studentId) {
         const currentClass = this.getCurrentClass();
         if (!currentClass) return;
         const student = currentClass.students.find(s => s.id === studentId);
         if (!student) return;
 
-        if (!confirm(`確定要刪除學生「${student.name}」嗎？此操作無法復原。`)) return;
+        this.showDialog({
+            title: '刪除學生',
+            message: `確定要刪除學生「${student.name}」嗎？\n此操作無法復原。`,
+            onConfirm: () => {
+                currentClass.students = currentClass.students.filter(s => s.id !== studentId);
 
-        currentClass.students = currentClass.students.filter(s => s.id !== studentId);
-
-        // Clean up drawn lists and homework entries referencing this student
-        this.overallDrawnStudents = this.overallDrawnStudents.filter(id => id !== studentId);
-        for (const dateKey in currentClass.homeworkCheckEntries) {
-            if (Object.hasOwnProperty.call(currentClass.homeworkCheckEntries, dateKey)) {
-                for (const homeworkItem in currentClass.homeworkCheckEntries[dateKey]) {
-                    if (Object.hasOwnProperty.call(currentClass.homeworkCheckEntries[dateKey], homeworkItem)) {
-                        delete currentClass.homeworkCheckEntries[dateKey][homeworkItem][studentId];
+                this.overallDrawnStudents = this.overallDrawnStudents.filter(id => id !== studentId);
+                for (const dateKey in currentClass.homeworkCheckEntries) {
+                    if (Object.hasOwnProperty.call(currentClass.homeworkCheckEntries, dateKey)) {
+                        for (const homeworkItem in currentClass.homeworkCheckEntries[dateKey]) {
+                            if (Object.hasOwnProperty.call(currentClass.homeworkCheckEntries[dateKey], homeworkItem)) {
+                                delete currentClass.homeworkCheckEntries[dateKey][homeworkItem][studentId];
+                            }
+                        }
                     }
                 }
+
+                this.saveData();
+                this.renderStudents();
+                this.showToast(`學生「${student.name}」已刪除。`);
             }
-        }
-
-        this.saveData();
-        this.renderStudents();
-        this.showToast(`學生「${student.name}」已刪除。`);
+        });
     }
-
-    // --- File Operations ---
 
     addStudentsFromText() {
         const text = this.addStudentsTextarea.value || '';
@@ -2747,7 +2898,7 @@ class StudentManager {
             }
         };
         reader.readAsText(file);
-        event.target.value = null; // Clear input for next import
+        event.target.value = null; 
     }
 
     exportAllData() {
@@ -2779,24 +2930,20 @@ class StudentManager {
             return;
         }
 
-        const wb = XLSX.utils.book_new(); // Use global XLSX object
+        const wb = XLSX.utils.book_new(); 
 
         this.classes.forEach(cls => {
-            // Prepare student data for the current class
             const studentsData = cls.students.map(student => ({
                 '學生ID': student.id,
                 '姓名': student.name,
                 '分數': student.score,
                 '是否請假': student.onLeave ? '是' : '否',
                 '特殊表現記錄': student.notes
-                // Add more student fields if necessary
             }));
 
-            // Create a worksheet for students
             const wsStudents = XLSX.utils.json_to_sheet(studentsData);
             XLSX.utils.book_append_sheet(wb, wsStudents, `${cls.name} 學生`);
 
-            // Prepare contact book data for the current class
             const contactBookEntries = Object.entries(cls.contactBookEntries).map(([date, entry]) => ({
                 '日期': date,
                 '重要資訊': entry.importantInfo,
@@ -2807,7 +2954,6 @@ class StudentManager {
                 XLSX.utils.book_append_sheet(wb, wsContactBook, `${cls.name} 連絡簿`);
             }
 
-            // Prepare homework check data for the current class
             const homeworkCheckRows = [];
             for (const dateKey in cls.homeworkCheckEntries) {
                 if (Object.hasOwnProperty.call(cls.homeworkCheckEntries, dateKey)) {
@@ -2833,7 +2979,6 @@ class StudentManager {
             }
         });
 
-        // Add a worksheet for predefined settings and other general app settings
         const settingsData = [
             { '類型': '特殊表現', '選項': this.predefinedBehaviors.join('\n') },
             { '類型': '重要資訊', '選項': this.predefinedImportantInfos.join('\n') },
@@ -2844,7 +2989,7 @@ class StudentManager {
         const wsSettings = XLSX.utils.json_to_sheet(settingsData);
         XLSX.utils.book_append_sheet(wb, wsSettings, '系統設定');
 
-        XLSX.writeFile(wb, '學生表現管理系統_所有資料.xlsx'); // Use global XLSX object
+        XLSX.writeFile(wb, '學生表現管理系統_所有資料.xlsx'); 
         this.showToast('所有資料已匯出 (Excel)。');
     }
 
@@ -2856,17 +3001,16 @@ class StudentManager {
         reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' }); // Use global XLSX object
+                const workbook = XLSX.read(data, { type: 'array' }); 
 
                 const importedClasses = [];
                 let importedPredefinedBehaviors = [];
                 let importedPredefinedImportantInfos = [];
                 let importedPredefinedHomeworks = [];
-                let importedStudentsPerRow = this.studentsPerRow; // Default to current if not found
-                let importedSelectedHomeworkItem = this.selectedHomeworkItem; // Default to current if not found
+                let importedStudentsPerRow = this.studentsPerRow; 
+                let importedSelectedHomeworkItem = this.selectedHomeworkItem; 
                 let currentClassIdAfterImport = null;
 
-                // Process settings sheet first
                 const settingsSheetName = workbook.SheetNames.find(name => name.includes('系統設定'));
                 if (settingsSheetName) {
                     const ws = workbook.Sheets[settingsSheetName];
@@ -2889,7 +3033,6 @@ class StudentManager {
                     });
                 }
 
-                // Iterate through sheets to find classes and their data
                 for (const sheetName of workbook.SheetNames) {
                     if (sheetName.includes('學生')) {
                         const className = sheetName.replace(' 學生', '').trim();
@@ -2897,14 +3040,14 @@ class StudentManager {
                         const json = XLSX.utils.sheet_to_json(ws);
 
                         const students = json.map(row => ({
-                            id: row['學生ID'] || Date.now() + Math.random(), // Generate ID if not present
+                            id: row['學生ID'] || Date.now() + Math.random(), 
                             name: row['姓名'],
                             score: parseInt(row['分數'] || 0, 10),
-                            actions: [], // Actions are not typically imported as they are historical
+                            actions: [], 
                             avatar: (row['姓名'] ? row['姓名'].charAt(0) : '?'),
                             notes: row['特殊表現記錄'] || '',
                             onLeave: row['是否請假'] === '是'
-                        })).filter(s => s.name); // Filter out students without names
+                        })).filter(s => s.name); 
 
                         if (students.length > 0) {
                             const newClass = {
@@ -2919,7 +3062,6 @@ class StudentManager {
                     }
                 }
 
-                // Now, re-iterate to add contact book and homework data to the imported classes
                 for (const sheetName of workbook.SheetNames) {
                     if (sheetName.includes('連絡簿')) {
                         const className = sheetName.replace(' 連絡簿', '').trim();
@@ -2954,7 +3096,7 @@ class StudentManager {
                                     }
                                     targetClass.students.forEach(student => {
                                         const statusText = row[student.name];
-                                        const status = this.homeworkStatusReverseMap[statusText] || 'submitted'; // Default to submitted
+                                        const status = this.homeworkStatusReverseMap[statusText] || 'submitted'; 
                                         targetClass.homeworkCheckEntries[dateKey][homeworkItem][student.id] = { status: status };
                                     });
                                 }
@@ -2965,20 +3107,20 @@ class StudentManager {
 
                 if (importedClasses.length > 0) {
                     this.classes = importedClasses;
-                    this.currentClassId = importedClasses[0].id; // Set current class to the first imported one
-                    currentClassIdAfterImport = importedClasses[0].id; // Store this for later use
+                    this.currentClassId = importedClasses[0].id; 
+                    currentClassIdAfterImport = importedClasses[0].id; 
 
                     if (importedPredefinedBehaviors.length > 0) this.predefinedBehaviors = importedPredefinedBehaviors;
                     if (importedPredefinedImportantInfos.length > 0) this.predefinedImportantInfos = importedPredefinedImportantInfos;
                     if (importedPredefinedHomeworks.length > 0) this.predefinedHomeworks = importedPredefinedHomeworks;
                     
-                    this.studentsPerRow = importedStudentsPerRow; // Update students per row
-                    this.selectedHomeworkItem = importedSelectedHomeworkItem; // Update selected homework item
+                    this.studentsPerRow = importedStudentsPerRow; 
+                    this.selectedHomeworkItem = importedSelectedHomeworkItem; 
 
                     this.saveData();
                     this.renderClassSelector();
                     this.renderStudents();
-                    this.initializeStudentsPerRowSelect(); // Re-initialize the select dropdown
+                    this.initializeStudentsPerRowSelect(); 
                     this.showToast('所有資料已成功從 Excel 匯入！');
                 } else {
                     this.showToast('從 Excel 檔案中找不到有效的班級資料。', 3000);
@@ -2988,13 +3130,11 @@ class StudentManager {
                 console.error('Error importing Excel data:', error);
                 this.showToast('匯入 Excel 檔案失敗，請確認檔案格式。', 3000);
             } finally {
-                event.target.value = null; // Clear input for next import
+                event.target.value = null; 
             }
         };
         reader.readAsArrayBuffer(file);
     }
-
-    // --- Drawing Modal ---
 
     openDrawingModal() {
         this.drawingModal.classList.add('show');
@@ -3018,7 +3158,6 @@ class StudentManager {
             return;
         }
 
-        // Filter out students who are on leave
         this.availableForDraw = currentClass.students.filter(s => !s.onLeave && !this.overallDrawnStudents.includes(s.id));
         this.drawingClassNameSpan.textContent = currentClass.name;
         this.drawingAvailableCountSpan.textContent = this.availableForDraw.length;
@@ -3042,23 +3181,23 @@ class StudentManager {
         const drawnStudentsThisRound = [];
         for (let i = 0; i < numToDraw; i++) {
             const randomIndex = Math.floor(Math.random() * this.availableForDraw.length);
-            const drawnStudent = this.availableForDraw.splice(randomIndex, 1)[0]; // Remove from available
+            const drawnStudent = this.availableForDraw.splice(randomIndex, 1)[0]; 
             drawnStudentsThisRound.push(drawnStudent);
-            this.overallDrawnStudents.push(drawnStudent.id); // Add to overall drawn list
+            this.overallDrawnStudents.push(drawnStudent.id); 
         }
 
         this.drawnStudentDisplay.innerHTML = drawnStudentsThisRound.map(s => `<p class="drawn-name">${s.name}</p>`).join('');
-        this.renderStudents(); // Re-render main grid to highlight drawn students
+        this.renderStudents(); 
         this.renderDrawnStudentsList();
-        this.prepareDrawing(); // Update available count and button states
+        this.prepareDrawing(); 
         this.playSound('draw');
     }
 
     resetDrawing() {
         this.overallDrawnStudents = [];
         this.drawnStudentDisplay.innerHTML = '<p class="placeholder-text">點擊「開始抽籤」</p>';
-        this.renderStudents(); // Remove drawn highlights from main grid
-        this.prepareDrawing(); // Reset available students and counts
+        this.renderStudents(); 
+        this.prepareDrawing(); 
         this.showToast('抽籤狀態已重置。');
     }
 
@@ -3076,8 +3215,6 @@ class StudentManager {
             }
         });
     }
-
-    // --- Countdown Modal ---
 
     openCountdownModal() {
         this.countdownModal.classList.add('show');
@@ -3108,7 +3245,7 @@ class StudentManager {
 
         this.startCountdownBtn.disabled = true;
         this.pauseCountdownBtn.disabled = false;
-        this.countdownControlBtns.forEach(btn => btn.disabled = true); // Disable manual input controls
+        this.countdownControlBtns.forEach(btn => btn.disabled = true); 
 
         this.countdownInterval = setInterval(() => {
             totalSeconds--;
@@ -3134,7 +3271,7 @@ class StudentManager {
             this.countdownInterval = null;
             this.startCountdownBtn.disabled = false;
             this.pauseCountdownBtn.disabled = true;
-            this.countdownControlBtns.forEach(btn => btn.disabled = false); // Re-enable manual input controls
+            this.countdownControlBtns.forEach(btn => btn.disabled = false); 
             this.showToast('倒數計時已暫停。');
         }
     }
@@ -3146,7 +3283,7 @@ class StudentManager {
         this.updateCountdownDisplay();
         this.startCountdownBtn.disabled = false;
         this.pauseCountdownBtn.disabled = true;
-        this.countdownControlBtns.forEach(btn => btn.disabled = false); // Re-enable manual input controls
+        this.countdownControlBtns.forEach(btn => btn.disabled = false); 
         this.showToast('倒數計時已重置。');
     }
 
@@ -3157,11 +3294,9 @@ class StudentManager {
         }
     }
 
-    // --- Contact Book Modal ---
-
     openContactBookModal() {
         this.contactBookModal.classList.add('show');
-        this.currentContactBookDate = new Date(); // Reset to current date on open
+        this.currentContactBookDate = new Date(); 
         this.renderContactBook();
         this.populatePredefinedContactBookOptions();
     }
@@ -3204,16 +3339,12 @@ class StudentManager {
     }
 
     populatePredefinedContactBookOptions() {
-        // Important Info
         this.predefinedInfoSelect.innerHTML = '<option value="">請選擇重要資訊</option>' + 
             this.predefinedImportantInfos.map(info => `<option value="${info}">${info}</option>`).join('');
 
-        // Homework
         this.predefinedHomeworkSelect.innerHTML = '<option value="">請選擇回家作業</option>' + 
             this.predefinedHomeworks.map(homework => `<option value="${homework}">${homework}</option>`).join('');
     }
-
-    // --- Blackboard Modal ---
 
     openBlackboardModal() {
         this.blackboardModal.classList.add('show');
@@ -3236,11 +3367,9 @@ class StudentManager {
         this.blackboardHomeworkDisplay.textContent = entry.homework || '無';
     }
 
-    // --- Homework Check Modal ---
-
     openHomeworkCheckModal() {
         this.homeworkCheckModal.classList.add('show');
-        this.currentHomeworkCheckDate = new Date(); // Reset to current date on open
+        this.currentHomeworkCheckDate = new Date(); 
         this.renderHomeworkCheck();
         this.populateHomeworkToCheckSelect();
     }
@@ -3274,7 +3403,7 @@ class StudentManager {
     changeHomeworkCheckDay(offset) {
         this.currentHomeworkCheckDate.setDate(this.currentHomeworkCheckDate.getDate() + offset);
         this.renderHomeworkCheck();
-        this.populateHomeworkToCheckSelect(); // Update homework options for the new date
+        this.populateHomeworkToCheckSelect(); 
     }
 
     populateHomeworkToCheckSelect() {
@@ -3288,12 +3417,10 @@ class StudentManager {
         const yesterdayContactBookEntry = currentClass.contactBookEntries[yesterdayDateKey];
         const homeworkFromYesterdayFull = yesterdayContactBookEntry ? yesterdayContactBookEntry.homework : '';
 
-        // Clear previous options
         this.homeworkToCheckSelect.innerHTML = '<option value="">請選擇或查看作業項目</option>';
 
-        const addedHomeworkItems = new Set(); // To track unique homework items added to the select
+        const addedHomeworkItems = new Set(); 
 
-        // Add homework items from yesterday's contact book
         if (homeworkFromYesterdayFull.trim() !== '') {
             const homeworkItems = homeworkFromYesterdayFull.split('\n').map(item => item.trim()).filter(item => item !== '');
             homeworkItems.forEach(item => {
@@ -3304,20 +3431,17 @@ class StudentManager {
             });
         }
         
-        // If a homework item was previously selected for *this date*, re-select it
         if (this.selectedHomeworkItem && addedHomeworkItems.has(this.selectedHomeworkItem)) {
             this.homeworkToCheckSelect.value = this.selectedHomeworkItem;
         } else {
-             // If no homework selected or previous selection is no longer valid, default to nothing selected
              this.homeworkToCheckSelect.value = '';
         }
-        // Always re-render grid based on the (potentially new) selected value
         this.renderHomeworkCheckStudentGrid();
     }
 
     renderHomeworkCheckStudentGrid() {
         const currentClass = this.getCurrentClass();
-        this.homeworkCheckStudentsContainer.innerHTML = ''; // Clear previous students
+        this.homeworkCheckStudentsContainer.innerHTML = ''; 
 
         if (!currentClass || currentClass.students.length === 0) {
             this.homeworkCheckStudentsContainer.innerHTML = '<p class="no-students-message">班級中沒有學生。</p>';
@@ -3325,7 +3449,7 @@ class StudentManager {
         }
 
         const selectedHomeworkValue = this.homeworkToCheckSelect.value;
-        this.selectedHomeworkItem = selectedHomeworkValue; // Keep track of the selected homework
+        this.selectedHomeworkItem = selectedHomeworkValue; 
         this.saveData();
 
         if (selectedHomeworkValue === '') {
@@ -3341,7 +3465,6 @@ class StudentManager {
 
         const formattedDateKey = this.formatDateForStorage(this.currentHomeworkCheckDate);
         
-        // Ensure the homework entry exists for the selected item and date
         if (!currentClass.homeworkCheckEntries[formattedDateKey]) {
             currentClass.homeworkCheckEntries[formattedDateKey] = {};
         }
@@ -3350,7 +3473,6 @@ class StudentManager {
         }
 
         currentClass.students.forEach(student => {
-            // Get or initialize student's homework status for the selected item
             const studentHomeworkStatus = currentClass.homeworkCheckEntries[formattedDateKey][selectedHomeworkValue][student.id] || { status: 'submitted' };
             const statusClass = `status-${studentHomeworkStatus.status}`;
             const displayText = this.homeworkStatusDisplayText[studentHomeworkStatus.status];
@@ -3359,7 +3481,7 @@ class StudentManager {
             cell.className = `homework-student-cell ${statusClass}`;
             cell.dataset.studentId = student.id;
             cell.dataset.homeworkStatus = studentHomeworkStatus.status;
-            cell.title = student.name; // Use title for full name on hover
+            cell.title = student.name; 
             cell.innerHTML = `
                 <span>${student.name}</span><br>
                 <small>${displayText}</small>
@@ -3390,18 +3512,13 @@ class StudentManager {
         cellElement.querySelector('small').textContent = this.homeworkStatusDisplayText[newStatus];
         this.showToast(`${currentClass.students.find(s => s.id === studentId).name} 的作業狀態已更新為「${this.homeworkStatusDisplayText[newStatus]}」。`, 1500);
         
-        // After changing status, re-render the main student grid to update homework summary on cards
         this.renderStudents();
     }
 
     saveHomeworkCheckEntries() {
-        // Data is already saved on each toggle, so this button mainly serves as a "Done" or explicit save confirmation.
-        // Can add a check here if there are unsaved changes, but for now, it's just a confirmation.
         this.showToast('作業檢查記錄已保存。');
         this.closeHomeworkCheckModal();
     }
-
-    // --- Settings Modal ---
 
     openSettingsModal() {
         this.settingsModal.classList.add('show');
@@ -3419,13 +3536,12 @@ class StudentManager {
         this.predefinedImportantInfos = this.predefinedInfoInput.value.split('\n').map(s => s.trim()).filter(s => s !== '');
         this.predefinedHomeworks = this.predefinedHomeworkInput.value.split('\n').map(s => s.trim()).filter(s => s !== '');
         this.saveData();
-        this.renderStudents(); // Re-render to update notes dropdowns
-        this.populatePredefinedContactBookOptions(); // Update contact book dropdowns
+        this.renderStudents(); 
+        this.populatePredefinedContactBookOptions(); 
         this.showToast('設定已保存。');
         this.closeSettingsModal();
     }
 
-    // --- Audio Playback ---
     async loadSound(url, type) {
         try {
             const response = await fetch(url);
@@ -3457,47 +3573,65 @@ class StudentManager {
         }
     }
 
-    // --- Students Per Row ---
     initializeStudentsPerRowSelect() {
         document.getElementById('students-per-row-select').value = this.studentsPerRow;
     }
 
     setStudentsPerRow(numCols) {
         this.studentsPerRow = numCols;
-        localStorage.setItem('studentsPerRow', numCols); // Save preference
-        this.renderStudents(); // Re-render the grid with new column count
+        localStorage.setItem('studentsPerRow', numCols); 
+        this.renderStudents(); 
         this.showToast(`每列顯示 ${numCols} 位學生。`);
     }
 
-    // --- Event Bindings ---
+    // NEW: Toggle all notes functionality
+    toggleAllNotes() {
+        this.allNotesVisible = !this.allNotesVisible;
+        const wrappers = document.querySelectorAll('.notes-content-wrapper');
+        const checkboxes = document.querySelectorAll('.toggle-notes-checkbox');
+        
+        wrappers.forEach(wrapper => {
+            if (this.allNotesVisible) {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        });
+
+        checkboxes.forEach(cb => {
+            cb.checked = this.allNotesVisible;
+        });
+
+        const statusText = this.allNotesVisible ? '已顯示' : '已隱藏';
+        this.showToast(`${statusText}所有特殊記錄區塊。`);
+    }
 
     bindEvents() {
-        console.log('Binding events...');
-        // Class management
         document.getElementById('class-select').addEventListener('change', (e) => this.switchClass(e.target.value));
         document.getElementById('add-class-btn').addEventListener('click', () => this.addClass());
         document.getElementById('delete-class-btn').addEventListener('click', () => this.deleteClass());
 
-        // Utility buttons
+        // NEW: Reset Stats Listener
+        document.getElementById('reset-stats-btn').addEventListener('click', () => this.resetClassStats());
+
         document.getElementById('draw-students-btn').addEventListener('click', () => this.openDrawingModal());
         document.getElementById('countdown-btn').addEventListener('click', () => this.openCountdownModal());
         document.getElementById('contact-book-btn').addEventListener('click', () => this.openContactBookModal());
         document.getElementById('homework-check-btn').addEventListener('click', () => this.openHomeworkCheckModal());
         document.getElementById('open-settings-btn').addEventListener('click', () => this.openSettingsModal());
+        
+        // NEW: Toggle all notes button listener
+        document.getElementById('toggle-all-notes-btn').addEventListener('click', () => this.toggleAllNotes());
 
-        // Settings save button (fix: ensure "儲存設定" works)
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
 
-        // File operations
         document.getElementById('export-btn').addEventListener('click', () => this.exportAllData());
         document.getElementById('import-data-btn').addEventListener('click', () => {
             document.getElementById('data-file-input').click();
         });
         document.getElementById('data-file-input').addEventListener('change', (e) => this.importAllData(e));
-        // Excel export button (fixed: connect UI button to exportAllDataToExcel)
         document.getElementById('export-excel-btn').addEventListener('click', () => this.exportAllDataToExcel());
 
-        // Add Students (text) button and dialog actions
         this.addStudentsTextBtn.addEventListener('click', () => {
             this.addStudentsTextWrapper.style.display = this.addStudentsTextWrapper.style.display === 'none' ? 'block' : 'none';
             this.addStudentsTextarea.focus();
@@ -3505,16 +3639,13 @@ class StudentManager {
         this.confirmAddStudentsBtn.addEventListener('click', () => this.addStudentsFromText());
         this.cancelAddStudentsBtn.addEventListener('click', () => { this.addStudentsTextWrapper.style.display = 'none'; this.addStudentsTextarea.value = ''; });
 
-        // Display options
         document.getElementById('students-per-row-select').addEventListener('change', (e) => this.setStudentsPerRow(parseInt(e.target.value, 10)));
 
-        // Drawing Modal events
         this.drawingModalCloseBtn.addEventListener('click', () => this.closeDrawingModal());
         this.startDrawBtn.addEventListener('click', () => this.startDrawing());
         this.resetDrawBtn.addEventListener('click', () => this.resetDrawing());
-        this.numToDrawInput.addEventListener('change', () => this.prepareDrawing()); // Update max value if changed
+        this.numToDrawInput.addEventListener('change', () => this.prepareDrawing()); 
 
-        // Countdown Modal events
         this.countdownModalCloseBtn.addEventListener('click', () => this.closeCountdownModal());
         this.startCountdownBtn.addEventListener('click', () => this.startCountdown());
         this.pauseCountdownBtn.addEventListener('click', () => this.pauseCountdown());
@@ -3538,7 +3669,6 @@ class StudentManager {
             });
         });
 
-        // Contact Book Modal events
         this.contactBookModalCloseBtn.addEventListener('click', () => this.closeContactBookModal());
         this.prevDayBtn.addEventListener('click', () => this.changeContactBookDay(-1));
         this.nextDayBtn.addEventListener('click', () => this.changeContactBookDay(1));
@@ -3546,25 +3676,21 @@ class StudentManager {
         this.predefinedInfoSelect.addEventListener('change', (e) => {
             const selectedInfo = e.target.value;
             if (selectedInfo) {
-                // Append selected info with a new line if textarea is not empty
                 this.importantInfoTextarea.value += (this.importantInfoTextarea.value.trim() !== '' ? '\n' : '') + selectedInfo;
             }
-            e.target.value = ''; // Reset select after use
+            e.target.value = ''; 
         });
         this.predefinedHomeworkSelect.addEventListener('change', (e) => {
             const selectedHomework = e.target.value;
             if (selectedHomework) {
-                // Append selected homework with a new line if textarea is not empty
                 this.homeworkTextarea.value += (this.homeworkTextarea.value.trim() !== '' ? '\n' : '') + selectedHomework;
             }
-            e.target.value = ''; // Reset select after use
+            e.target.value = ''; 
         });
         this.showBlackboardBtn.addEventListener('click', () => this.openBlackboardModal());
 
-        // Blackboard Modal events
         this.blackboardModalCloseBtn.addEventListener('click', () => this.closeBlackboardModal());
 
-        // Homework Check Modal events
         this.homeworkCheckModalCloseBtn.addEventListener('click', () => this.closeHomeworkCheckModal());
         this.homeworkCheckPrevDayBtn.addEventListener('click', () => this.changeHomeworkCheckDay(-1));
         this.homeworkCheckNextDayBtn.addEventListener('click', () => this.changeHomeworkCheckDay(1));
@@ -3573,10 +3699,57 @@ class StudentManager {
     }
 }
 
-// Instantiate the manager when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const manager = new StudentManager();
 });
+
+StudentManager.prototype.swapStudentsOrder = function(draggedId, targetId) {
+    const currentClass = this.getCurrentClass();
+    if (!currentClass) return;
+
+    const draggedIndex = currentClass.students.findIndex(s => s.id == draggedId);
+    const targetIndex = currentClass.students.findIndex(s => s.id == targetId);
+
+    if (draggedIndex >= 0 && targetIndex >= 0) {
+        const temp = currentClass.students[draggedIndex];
+        currentClass.students[draggedIndex] = currentClass.students[targetIndex];
+        currentClass.students[targetIndex] = temp;
+    }
+    this.saveData();
+    this.renderStudents();
+};
+
+const _renderStudents = StudentManager.prototype.renderStudents;
+StudentManager.prototype.renderStudents = function() {
+    _renderStudents.apply(this, arguments);
+    const grid = document.getElementById('students-grid');
+    grid.querySelectorAll(".student-card").forEach(card => {
+        card.setAttribute("draggable", "true");
+
+        card.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", card.dataset.studentId);
+            card.classList.add("dragging");
+        });
+
+        card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+        });
+
+        card.addEventListener("dragover", (e) => {
+            e.preventDefault();
+        });
+
+        card.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const draggedId = e.dataTransfer.getData("text/plain");
+            const targetId = card.dataset.studentId;
+            if (draggedId !== targetId) {
+                this.swapStudentsOrder(draggedId, targetId);
+            }
+        });
+    });
+};
+
 </script>
 </body>
 </html>
